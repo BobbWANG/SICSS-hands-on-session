@@ -41,3 +41,9 @@ Organizaitonal_culture_tidytext %>%
     arrange(desc(n))
 ```
 
+```{r Remove stopwords}
+data("stop_words")
+Organizaitonal_culture_tidytext <- Organizaitonal_culture_tidytext %>%
+      anti_join(stop_words)
+```
+
