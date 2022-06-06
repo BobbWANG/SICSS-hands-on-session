@@ -1,0 +1,43 @@
+---
+title: "Text analysis"
+author: "Bo Wang"
+date: '2022-06-06'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load data file}
+Organizaitonal_Culture <- readxl::read_xlsx("companies_locationAndwordcount.xlsx",na = "",col_names = T, sheet = "Sheet2")
+```
+
+```{r Load environment for text analysis}
+library(tm)
+library(tidyverse)
+library(tidytext)
+library(dplyr)
+```
+
+```{r Corpus approach}
+# by using tm package, create corpus dataframe for text data 
+Organizaitonal_culture_corpus <- Corpus(VectorSource(as.vector(Organizaitonal_Culture$company_description))) 
+Organizaitonal_culture_corpus
+```
+
+```{r Tidy-text approach}
+# by using tidyverse package, create tidy-text data
+Organizaitonal_culture_tidytext <- Organizaitonal_Culture %>%
+    select(company,company_description) %>%
+    unnest_tokens("word", company_description)
+head(Organizaitonal_culture_tidytext)
+
+```
+
+```{r}
+Organizaitonal_culture_tidytext %>%
+  count(word) %>%
+    arrange(desc(n))
+```
+
