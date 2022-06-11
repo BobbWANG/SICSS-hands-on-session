@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r Load data file}
-Organizaitonal_Culture <- readxl::read_xlsx("companies_locationAndwordcount.xlsx",na = "",col_names = T, sheet = "Sheet2")
+Organizaitonal_Culture <- readxl::read_xlsx("companies_2ndPartwith1ndPart60.xlsx",na = "",col_names = T, sheet = "Sheet2")
 ```
 
 ```{r Load environment for text analysis}
@@ -27,7 +27,7 @@ Organizaitonal_culture_corpus
 ```
 
 ```{r Tidy-text approach}
-# by using tidyverse package, create tidy-text data
+# by using tidyverse package, create tidy-text data, punctuations are automatically removed and all words are automatically made lower case 
 Organizaitonal_culture_tidytext <- Organizaitonal_Culture %>%
     select(company,company_description) %>%
     unnest_tokens("word", company_description)
@@ -46,4 +46,207 @@ data("stop_words")
 Organizaitonal_culture_tidytext <- Organizaitonal_culture_tidytext %>%
       anti_join(stop_words)
 ```
+
+```{r}
+Organizaitonal_culture_tidytext %>%
+  count(word) %>%
+    arrange(desc(n))
+```
+
+
+```{r Custom remove list}
+# it is possible to remove more meaningless words by creating a custom list
+Custom_removal <- t(as.data.frame(c("overview", "SMART")))  # 'overview' is the field title for all d
+Custom_removal <- Custom_removal %>% as.data.frame(row.name = as.numeric("1")) %>% rename(word = V1, lexicon = V2)
+
+Organizaitonal_culture_tidytext <- Organizaitonal_culture_tidytext %>%
+      anti_join(Custom_removal)
+
+Organizaitonal_culture_tidytext %>%
+  count(word) %>%
+    arrange(desc(n))
+```
+
+```{r}
+str(Organizaitonal_culture_tidytext)
+```
+
+
+```{r}
+Organizaitonal_culture_NoNumbers <- Organizaitonal_culture_tidytext[-grep("\\b\\d+\\b", Organizaitonal_culture_tidytext$word), ]
+
+Organizaitonal_culture_NoNumbers %>%
+  count(word) %>%
+    arrange(desc(n))
+```
+
+```{r Remove whitespaces}
+# maybe this step is no longer necessary because I don't see there is a difference by running this line of code
+
+Organizaitonal_culture_NoNumbers$word <- gsub("\\s+","",Organizaitonal_culture_NoNumbers$word)
+```
+
+```{r Load package for stemming}
+library(SnowballC)
+```
+
+```{r Stemming}
+Organizaitonal_culture_NoNumbers <- Organizaitonal_culture_NoNumbers %>%
+      mutate_at("word", list(~wordStem((.), language="en")))
+
+Organizaitonal_culture_NoNumbers %>%
+  count(word) %>%
+    arrange(desc(n))
+```
+
+```{r Creat the document-term matrix for subsequent text analysis}
+# Creat the document-term matrix for subsequent text analysis
+
+Organizaitonal_culture_DTM <-
+  Organizaitonal_culture_NoNumbers %>%
+  count(company, word) %>%
+  cast_dtm(company, word, n)
+```
+
+```{r}
+print(Organizaitonal_culture_DTM)
+```
+
+
+
+
+```{r}
+library(topicmodels)
+library(tidyverse)
+data("AssociatedPress")
+AssociatedPress %>% tidy()
+```
+
+```{r}
+Tidy_text <- AssociatedPress %>% tidy()
+```
+
+```{r}
+# set a seed so that the output of the model is predictable
+ap_lda <- LDA(AssociatedPress, k = 2, control = list(seed = 1234))
+ap_lda
+#> A LDA_VEM topic model with 2 topics.
+```
+
+```{r}
+library(tidytext)
+
+ap_topics <- tidy(ap_lda, matrix = "beta")
+ap_topics %>% mutate_if(is.numeric, round, 3)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+```
+
+
+```{r}
+ap_top_terms <- ap_topics %>%
+  group_by(topic) %>%
+  slice_max(beta, n = 10) %>% 
+  ungroup() %>%
+  arrange(topic, -beta)
+
+ap_top_terms %>%
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  scale_y_reordered()
+```
+
+```{r}
+library(tidyr)
+
+beta_wide <- ap_topics %>%
+  mutate(topic = paste0("topic", topic)) %>%
+  pivot_wider(names_from = topic, values_from = beta) %>% 
+  filter(topic1 > .001 | topic2 > .001) %>%
+  mutate(log_ratio = log2(topic2 / topic1))
+
+beta_wide %>% mutate_if(is.numeric, round, 3)
+#> # A tibble: 198 × 4
+#>    term              topic1      topic2 log_ratio
+#>    <chr>              <dbl>       <dbl>     <dbl>
+#>  1 administration 0.000431  0.00138         1.68 
+#>  2 ago            0.00107   0.000842       -0.339
+#>  3 agreement      0.000671  0.00104         0.630
+#>  4 aid            0.0000476 0.00105         4.46 
+#>  5 air            0.00214   0.000297       -2.85 
+#>  6 american       0.00203   0.00168        -0.270
+#>  7 analysts       0.00109   0.000000578   -10.9  
+#>  8 area           0.00137   0.000231       -2.57 
+#>  9 army           0.000262  0.00105         2.00 
+#> 10 asked          0.000189  0.00156         3.05 
+#> # … with 188 more rows
+```
+
+```{r}
+ap_documents <- tidy(ap_lda, matrix = "gamma")
+ap_documents %>% mutate_if(is.numeric, round, 3)
+```
+
+
+
+
+
+
+```{r}
+# generate vector of html files
+files <- c('/Users/bowang/Documents/workstation/SICSS-hands-on-session/companies_in_the_pilot_study/AL 1-1.html', '/Users/bowang/Documents/workstation/SICSS-hands-on-session/companies_in_the_pilot_study/AR 1-1.html')
+
+# readLines for each file and put them in a list
+lineList <- lapply(files, readLines)
+
+# create a character vector that contains all lines from all files
+lineVector <- unlist(lineList)
+
+# collapse the character vector into a single string
+html <- paste(lineVector , collapse = '\n')
+
+# print the string with original formatting
+cat(html) 
+```
+
+```{r}
+library(xml2)
+```
+
+
+```{r}
+rawHTML <- read_html(x = "/companies_in_the_pilot_study/AL 1-1.html")
+```
+
+
+```{r}
+Merge_P1 <- readxl::read_xlsx("60_descriptions_meta_data.xlsx",na = "",col_names = T, sheet = "Sheet1")
+Merge_P2 <- readxl::read_xlsx("60_used_Descriptions.xlsx",na = "",col_names = T, sheet = "Sheet2")
+```
+
+```{r}
+Merge_P1$Organizaiton[!(Merge_P1$Organizaiton %in% Merge_P2$Organizaiton)]
+```
+
+```{r}
+str(Merge_P2)
+```
+
+
+```{r}
+Merged <- merge(Merge_P1, Merge_P2, by = "Organizaiton")
+```
+
+
+
+
+
+
+
+
 
