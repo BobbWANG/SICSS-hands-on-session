@@ -2,7 +2,8 @@
 title: "Text analysis"
 author: "Bo Wang"
 date: '2022-06-06'
-output: md_document:
+output: 
+  md_document:
   variant: markdown_github
 ---
 
@@ -197,30 +198,6 @@ ap_documents %>% mutate_if(is.numeric, round, 3)
 11111111hgni=
 #> A LDA_VEM topic model with 2 topics.
 
-```{r}
-library(rmarkdown)
-```
-
-
-```{r}
-render("Text analysis.Rmd", md_document(
-  variant = "markdown_github",
-  preserve_yaml = FALSE,
-  toc = FALSE,
-  toc_depth = 3,
-  number_sections = FALSE,
-  standalone = FALSE,
-  fig_width = 7,
-  fig_height = 5,
-  fig_retina = NULL,
-  dev = "png",
-  df_print = "default",
-  includes = NULL,
-  md_extensions = NULL,
-  pandoc_args = NULL,
-  ext = ".md"
-))
-```
 
 
 
