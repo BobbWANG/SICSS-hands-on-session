@@ -2,7 +2,8 @@
 title: "Text analysis"
 author: "Bo Wang"
 date: '2022-06-06'
-output: html_document
+output: md_document:
+  variant: markdown_github
 ---
 
 ```{r setup, include=FALSE}
@@ -193,59 +194,33 @@ ap_documents %>% mutate_if(is.numeric, round, 3)
 ```
 
 
-1
-
-
-
-```{r}
-# generate vector of html files
-files <- c('/Users/bowang/Documents/workstation/SICSS-hands-on-session/companies_in_the_pilot_study/AL 1-1.html', '/Users/bowang/Documents/workstation/SICSS-hands-on-session/companies_in_the_pilot_study/AR 1-1.html')
-
-# readLines for each file and put them in a list
-lineList <- lapply(files, readLines)
-
-# create a character vector that contains all lines from all files
-lineVector <- unlist(lineList)
-
-# collapse the character vector into a single string
-html <- paste(lineVector , collapse = '\n')
-
-# print the string with original formatting
-cat(html) 
-```
+11111111hgni=
+#> A LDA_VEM topic model with 2 topics.
 
 ```{r}
-library(xml2)
+library(rmarkdown)
 ```
 
 
 ```{r}
-rawHTML <- read_html(x = "/companies_in_the_pilot_study/AL 1-1.html")
+render("Text analysis.Rmd", md_document(
+  variant = "markdown_github",
+  preserve_yaml = FALSE,
+  toc = FALSE,
+  toc_depth = 3,
+  number_sections = FALSE,
+  standalone = FALSE,
+  fig_width = 7,
+  fig_height = 5,
+  fig_retina = NULL,
+  dev = "png",
+  df_print = "default",
+  includes = NULL,
+  md_extensions = NULL,
+  pandoc_args = NULL,
+  ext = ".md"
+))
 ```
-
-
-```{r}
-Merge_P1 <- readxl::read_xlsx("60_descriptions_meta_data.xlsx",na = "",col_names = T, sheet = "Sheet1")
-Merge_P2 <- readxl::read_xlsx("60_used_Descriptions.xlsx",na = "",col_names = T, sheet = "Sheet2")
-```
-
-```{r}
-Merge_P1$Organizaiton[!(Merge_P1$Organizaiton %in% Merge_P2$Organizaiton)]
-```
-
-```{r}
-str(Merge_P2)
-```
-
-
-```{r}
-Merged <- merge(Merge_P1, Merge_P2, by = "Organizaiton")
-```
-
-
-
-
-
 
 
 
