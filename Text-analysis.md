@@ -1,3 +1,93 @@
+## Research Purpose
+
+Online Job advertisement is a primary method for recruitment.
+Researchers already apply text mining techniques to online job
+advertisement to track job-related information, e.g., skills required
+for different jobs. In online job advertisement, employers also post
+crucial organization-related information for attracting applicants,
+e.g., organizational culture, career development program. However,
+research seldomly investigates how organization-related information
+affects recruitment outcomes.
+
+To fill this gap, the current project has two purposes: a) investigating
+the relations between organizational cultures-Adaptability, Integrity,
+Collaborative, Results-oriented, Customer-oriented, Detail-oriented from
+the Organizational Culture Profile (OCP; Chatman et al. 2014)
+framework-and organizational attractiveness in the online job
+advertisement context by means of multilevel mixed-effects regression
+analysis, b) developing deep learning modelling algorithms that can
+predict the six organizational cultures and organizational
+attractiveness from online job advertisement text separately.
+
+## Organizational Culture
+
+Definition: Things that are valued or rewarded within a specific
+organization – that is, the pattern of beliefs and expectations shared
+by members, and the behaviors that result from them.
+
+## Organizational Culture Profile
+
+Adaptability: being innovative, risk taking, being willing to
+experiment, fast moving, being quick to take advantage of opportunities,
+not being constrained by many rules
+
+Integrity: having integrity, having high ethical standards, being
+honest, respecting individuals, being fair
+
+Collaborative: working in collaboration with others, being team
+oriented, cooperative, being supportive, avoid conflict
+
+Results oriented: being results oriented, having high expectations for
+performance, achievement
+
+Customer oriented: being customer oriented, listening to customers,
+being market driven
+
+Detail oriented: paying attention to detail, emphasizing quality, being
+precise
+
+The original format of the scale is Q-sort task, which is relatively
+time- and energy-consuming for participants. Therefore, we decide to
+develop and validate more easy question formats: Likert scale item and
+point allocation task.
+
+## A Pilot Study
+
+313 participants and 60 job advertisements extracted from a professional
+recruitment website. After reading organization-related information from
+each job advertisement, participants rated the described organization on
+the six OCP organizational cultures and organizational attractiveness.
+
+We calculated the validation coefficients for the different question
+formats.
+
+Generally, the different question format converged well with each other.
+Questions measuring the same culture dimension indicated high
+correlations than questions measuring different culture dimensions.
+
+## I am Personally not Satisfied With Current Outcome
+
+We didnt’ replicate the six organizational cultures by using the OCP
+following the original authors’ procedure.
+
+Whether the dimensions people use to communicate organizational cultures
+are different from the employers try to communicate in job
+advertisements?
+
+I think there it needs a more validation step based on a relative large
+sample size having relatively good external validity. That is applying
+text mining techniques to job advertisements.
+
+## A New Validation Step by Using Structural Topic Modeling
+
+Compare the culture keywords from the OCP with the topics returned by
+the STM.
+
+Because we have 60 descriptions rated by on average 10 raters, we can
+make use of these scores to make further comparisons. For example, we
+choose the description with high OCP Integrity score and see the
+dominant topics that the STM characterize.
+
 ``` r
 Organizaitonal_Culture <- readxl::read_xlsx("companies_2ndPartwith1ndPart60.xlsx",na = "",col_names = T, sheet = "Sheet2")
 ```
@@ -283,7 +373,7 @@ ap_top_terms %>%
   scale_y_reordered()
 ```
 
-![](Text-analysis_files/figure-markdown_github/unnamed-chunk-13-1.png)
+![](Text-analysis_files/figure-markdown_github/unnamed-chunk-11-1.png)
 
 ``` r
 library(tidyr)
