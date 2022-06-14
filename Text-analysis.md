@@ -1,24 +1,3 @@
-## Research Purpose
-
-Online Job advertisement is a primary method for recruitment.
-Researchers already apply text mining techniques to online job
-advertisement to track job-related information, e.g., skills required
-for different jobs. In online job advertisement, employers also post
-crucial organization-related information for attracting applicants,
-e.g., organizational culture, career development program. However,
-research seldomly investigates how organization-related information
-affects recruitment outcomes.
-
-To fill this gap, the current project has two purposes: a) investigating
-the relations between organizational cultures-Adaptability, Integrity,
-Collaborative, Results-oriented, Customer-oriented, Detail-oriented from
-the Organizational Culture Profile (OCP; Chatman et al. 2014)
-framework-and organizational attractiveness in the online job
-advertisement context by means of multilevel mixed-effects regression
-analysis, b) developing deep learning modelling algorithms that can
-predict the six organizational cultures and organizational
-attractiveness from online job advertisement text separately.
-
 ## Organizational Culture
 
 Definition: Things that are valued or rewarded within a specific
@@ -65,378 +44,271 @@ Generally, the different question format converged well with each other.
 Questions measuring the same culture dimension indicated high
 correlations than questions measuring different culture dimensions.
 
-## I am Personally not Satisfied With Current Outcome
+## I am Personally not Satisfied With the Validation Outcome
 
 We didnt’ replicate the six organizational cultures by using the OCP
 following the original authors’ procedure.
+
+One potential reason is that our sample size is not large enough.
+
+Another reason would be that novel people’s (employees’) communication
+or experience of organizational cultures is different from employers’.
 
 Whether the dimensions people use to communicate organizational cultures
 are different from the employers try to communicate in job
 advertisements?
 
-I think there it needs a more validation step based on a relative large
-sample size having relatively good external validity. That is applying
-text mining techniques to job advertisements.
+I think the questions with different formats need a more validation step
+based on a relative large sample size having relatively good external
+validity. That is applying text mining techniques to job advertisements.
 
 ## A New Validation Step by Using Structural Topic Modeling
 
-Compare the culture keywords from the OCP with the topics returned by
-the STM.
+We extracted more descriptions (around 2200 descriptions including the
+original sixty). I can compare the culture keywords from the OCP with
+the topic keywords returned by the STM.
 
-Because we have 60 descriptions rated by on average 10 raters, we can
-make use of these scores to make further comparisons. For example, we
-choose the description with high OCP Integrity score and see the
-dominant topics that the STM characterize.
+Because the original 60 descriptions were rated by on average 10 raters,
+I can make use of these scores. For example, I can choose a description
+and see the extent to which the dominant topics (the keywords related to
+them) that the STM characterize converge with the its OCP culture
+scores.
+
+The following are the concrete steps I took and some snapshoots of the
+results. During the analyssi, I encountered some problems that need your
+help and suggestions!
+
+### Read in data
 
 ``` r
 Organizaitonal_Culture <- readxl::read_xlsx("companies_2ndPartwith1ndPart60.xlsx",na = "",col_names = T, sheet = "Sheet2")
 ```
 
+### Load packages for data analysis
+
 ``` r
-library(tm)
-library(tidyverse)
-library(tidytext)
-library(dplyr)
+library(stm)
+```
+
+### Preprocess the documents
+
+``` r
+Organizaitonal_culture_Preprocessed <- textProcessor(Organizaitonal_Culture$company_description, metadata = Organizaitonal_Culture,
+lowercase = TRUE,
+removestopwords = TRUE,
+removenumbers = TRUE,
+removepunctuation = TRUE,
+ucp = FALSE,
+stem = TRUE,
+wordLengths = c(3, Inf),
+sparselevel = 1,
+language = "en",
+verbose = TRUE,
+onlycharacter = FALSE,
+striphtml = FALSE,
+customstopwords = c("company"),
+custompunctuation = NULL,
+v1 = FALSE) 
+```
+
+    ## Building corpus... 
+    ## Converting to Lower Case... 
+    ## Removing punctuation... 
+    ## Removing stopwords... 
+    ## Remove Custom Stopwords...
+    ## Removing numbers... 
+    ## Stemming... 
+    ## Creating Output...
+
+### Plot the number of words and documents removed for different thresholds
+
+``` r
+plotRemoved(Organizaitonal_culture_Preprocessed$documents, lower.thresh = seq(1, 201, by = 10))
+```
+
+![](Text-analysis_files/figure-markdown_github/unnamed-chunk-1-1.png)
+
+### Select a threshold and preprocess the documents
+
+Qeustions: What are your suggestions for selecting a reasonable
+threshold? Setting the threshold as 24 (1% of the number of the total
+documents)
+
+``` r
+output_thresh24 <- prepDocuments(Organizaitonal_culture_Preprocessed$documents, Organizaitonal_culture_Preprocessed$vocab, lower.thresh = 24)
+```
+
+    ## Removing 20753 of 22132 terms (47100 of 228713 tokens) due to frequency 
+    ## Your corpus now has 2333 documents, 1379 terms and 181613 tokens.
+
+Setting the threshold as 117 (1% of the number of the total documents)
+
+``` r
+output_thresh117 <- prepDocuments(Organizaitonal_culture_Preprocessed$documents, Organizaitonal_culture_Preprocessed$vocab, lower.thresh = 117)
+```
+
+    ## Removing 21717 of 22132 terms (100760 of 228713 tokens) due to frequency 
+    ## Your corpus now has 2333 documents, 415 terms and 127953 tokens.
+
+### Model selection and search
+
+Searching when setting the threshold as 24.
+
+``` r
+model_search_thresh24 <- searchK(output_thresh24$documents, out$vocab, K = (2:50), proportion = 0.3, heldout.seed = 666666, cores = 5)
+```
+
+    ## Using multiple-cores.  Progress will not be shown.
+
+### Plot of model selection results
+
+Semantic coherence: the core idea is that in models which are
+semantically coherent the words which are most probable under a topic
+should co-occur within the same document. Semantic exclusivity: The core
+idea is that the top words for a topic are unlikely to appear within top
+words of other topics. These two indexes are usually negatively
+correlated so that a trade-off must be made. \#### Plot for the model
+selection results when the threshold is 24 documents.
+
+``` r
+plot(model_search_thresh24)
+```
+
+![](Text-analysis_files/figure-markdown_github/unnamed-chunk-5-1.png)
+
+Searching when setting the threshold as 117.
+
+``` r
+model_search_thresh117 <- searchK(output_thresh117$documents, output_thresh117$vocab, K = (2:50), proportion = 0.3, heldout.seed = 666666, cores = 5)
+```
+
+    ## Using multiple-cores.  Progress will not be shown.
+
+### Plot for the model selection results when the threshold is 117 documents.
+
+``` r
+plot(model_search_thresh117)
+```
+
+![](Text-analysis_files/figure-markdown_github/unnamed-chunk-7-1.png)
+\### Inspect the model indices \#### when the threshold is 24
+
+``` r
+model_indices_threshold24 <- as.data.frame(cbind(t(as.data.frame(model_search_thresh24[['results']]$K)), t(as.data.frame(model_search_thresh24[['results']]$exclus)), t(as.data.frame(model_search_thresh24[['results']]$semcoh))))
 ```
 
 ``` r
-# by using tm package, create corpus dataframe for text data 
-Organizaitonal_culture_corpus <- Corpus(VectorSource(as.vector(Organizaitonal_Culture$company_description))) 
-Organizaitonal_culture_corpus
+model_indices_threshold24  %>% rename(Nnumber_of_topics = V1, semantic_coherence = V2, semantic_exclusivity = V3) %>% arrange(semantic_coherence)
 ```
 
-    ## <<SimpleCorpus>>
-    ## Metadata:  corpus specific: 1, document level (indexed): 0
-    ## Content:  documents: 2333
+    ##      Nnumber_of_topics semantic_coherence semantic_exclusivity
+    ## X2L                  2           7.518328            -42.09876
+    ## X3L                  3           8.486763            -43.02820
+    ## X4L                  4           8.850150            -51.89582
+    ## X5L                  5           8.948939            -50.02412
+    ## X6L                  6           8.988951            -50.43239
+    ## X7L                  7           9.105246            -52.24001
+    ## X8L                  8           9.270346            -56.01724
+    ## X9L                  9           9.411032            -54.57593
+    ## X12L                12           9.440370            -67.73229
+    ## X11L                11           9.447235            -69.03620
+    ## X14L                14           9.508421            -60.25668
+    ## X10L                10           9.508844            -67.37928
+    ## X13L                13           9.515982            -68.92263
+    ## X15L                15           9.573830            -67.05819
+    ## X16L                16           9.588443            -68.42804
+    ## X17L                17           9.607107            -70.79534
+    ## X19L                19           9.633726            -64.71206
+    ## X20L                20           9.636732            -64.39921
+    ## X26L                26           9.645907            -67.55717
+    ## X18L                18           9.646221            -71.22884
+    ## X23L                23           9.651970            -66.47508
+    ## X21L                21           9.658838            -66.92676
+    ## X25L                25           9.664903            -68.22149
+    ## X22L                22           9.672905            -66.03079
+    ## X27L                27           9.678719            -69.91483
+    ## X24L                24           9.680013            -69.78348
+    ## X29L                29           9.693803            -71.18053
+    ## X28L                28           9.697275            -70.31731
+    ## X31L                31           9.703585            -72.41313
+    ## X30L                30           9.705764            -71.50157
+    ## X33L                33           9.732504            -74.11152
+    ## X32L                32           9.733894            -72.84688
+    ## X34L                34           9.739771            -72.26233
+    ## X38L                38           9.746786            -74.55428
+    ## X40L                40           9.752180            -75.73091
+    ## X37L                37           9.754612            -73.89920
+    ## X39L                39           9.757536            -74.11764
+    ## X36L                36           9.760657            -73.43013
+    ## X35L                35           9.761187            -72.41692
+    ## X43L                43           9.765681            -73.90951
+    ## X44L                44           9.767335            -74.02882
+    ## X41L                41           9.767390            -74.92393
+    ## X42L                42           9.769739            -74.32519
+    ## X45L                45           9.771051            -74.78722
+    ## X46L                46           9.780582            -77.27170
+    ## X49L                49           9.781239            -76.38981
+    ## X47L                47           9.781291            -77.02098
+    ## X48L                48           9.784727            -75.64237
+    ## X50L                50           9.786907            -77.09252
+
+#### when the threshold is 117
 
 ``` r
-# by using tidyverse package, create tidy-text data, punctuations are automatically removed and all words are automatically made lower case 
-Organizaitonal_culture_tidytext <- Organizaitonal_Culture %>%
-    select(company,company_description) %>%
-    unnest_tokens("word", company_description)
-head(Organizaitonal_culture_tidytext)
-```
-
-    ## # A tibble: 6 × 2
-    ##   company                         word  
-    ##   <chr>                           <chr> 
-    ## 1 FFL Agent Force - Stokes Agency at    
-    ## 2 FFL Agent Force - Stokes Agency ffl   
-    ## 3 FFL Agent Force - Stokes Agency agent 
-    ## 4 FFL Agent Force - Stokes Agency force 
-    ## 5 FFL Agent Force - Stokes Agency stokes
-    ## 6 FFL Agent Force - Stokes Agency agency
-
-``` r
-Organizaitonal_culture_tidytext %>%
-  count(word) %>%
-    arrange(desc(n))
-```
-
-    ## # A tibble: 28,126 × 2
-    ##    word      n
-    ##    <chr> <int>
-    ##  1 and   24754
-    ##  2 the   17779
-    ##  3 to    15605
-    ##  4 of    12648
-    ##  5 our   10973
-    ##  6 a     10216
-    ##  7 in     9597
-    ##  8 we     8144
-    ##  9 is     5920
-    ## 10 for    5721
-    ## # … with 28,116 more rows
-
-``` r
-data("stop_words")
-Organizaitonal_culture_tidytext <- Organizaitonal_culture_tidytext %>%
-      anti_join(stop_words)
-```
-
-    ## Joining, by = "word"
-
-``` r
-Organizaitonal_culture_tidytext %>%
-  count(word) %>%
-    arrange(desc(n))
-```
-
-    ## # A tibble: 27,503 × 2
-    ##    word          n
-    ##    <chr>     <int>
-    ##  1 services   2505
-    ##  2 overview   2266
-    ##  3 company    1737
-    ##  4 care       1699
-    ##  5 business   1533
-    ##  6 team       1494
-    ##  7 service    1480
-    ##  8 employees  1479
-    ##  9 clients    1420
-    ## 10 benefits   1394
-    ## # … with 27,493 more rows
-
-``` r
-# it is possible to remove more meaningless words by creating a custom list
-Custom_removal <- t(as.data.frame(c("overview", "SMART")))  # 'overview' is the field title for all d
-Custom_removal <- Custom_removal %>% as.data.frame(row.name = as.numeric("1")) %>% rename(word = V1, lexicon = V2)
-
-Organizaitonal_culture_tidytext <- Organizaitonal_culture_tidytext %>%
-      anti_join(Custom_removal)
-```
-
-    ## Joining, by = "word"
-
-``` r
-Organizaitonal_culture_tidytext %>%
-  count(word) %>%
-    arrange(desc(n))
-```
-
-    ## # A tibble: 27,502 × 2
-    ##    word          n
-    ##    <chr>     <int>
-    ##  1 services   2505
-    ##  2 company    1737
-    ##  3 care       1699
-    ##  4 business   1533
-    ##  5 team       1494
-    ##  6 service    1480
-    ##  7 employees  1479
-    ##  8 clients    1420
-    ##  9 benefits   1394
-    ## 10 people     1376
-    ## # … with 27,492 more rows
-
-``` r
-str(Organizaitonal_culture_tidytext)
-```
-
-    ## tibble [289,576 × 2] (S3: tbl_df/tbl/data.frame)
-    ##  $ company: chr [1:289576] "FFL Agent Force - Stokes Agency" "FFL Agent Force - Stokes Agency" "FFL Agent Force - Stokes Agency" "FFL Agent Force - Stokes Agency" ...
-    ##  $ word   : chr [1:289576] "ffl" "agent" "force" "stokes" ...
-
-``` r
-Organizaitonal_culture_NoNumbers <- Organizaitonal_culture_tidytext[-grep("\\b\\d+\\b", Organizaitonal_culture_tidytext$word), ]
-
-Organizaitonal_culture_NoNumbers %>%
-  count(word) %>%
-    arrange(desc(n))
-```
-
-    ## # A tibble: 25,079 × 2
-    ##    word          n
-    ##    <chr>     <int>
-    ##  1 services   2505
-    ##  2 company    1737
-    ##  3 care       1699
-    ##  4 business   1533
-    ##  5 team       1494
-    ##  6 service    1480
-    ##  7 employees  1479
-    ##  8 clients    1420
-    ##  9 benefits   1394
-    ## 10 people     1376
-    ## # … with 25,069 more rows
-
-``` r
-# maybe this step is no longer necessary because I don't see there is a difference by running this line of code
-
-Organizaitonal_culture_NoNumbers$word <- gsub("\\s+","",Organizaitonal_culture_NoNumbers$word)
+model_indices_threshold117 <- as.data.frame(cbind(t(as.data.frame(model_search_thresh117[['results']]$K)), t(as.data.frame(model_search_thresh117[['results']]$exclus)), t(as.data.frame(model_search_thresh117[['results']]$semcoh))))
 ```
 
 ``` r
-library(SnowballC)
+model_indices_threshold117  %>% rename(Nnumber_of_topics = V1, semantic_coherence = V2, semantic_exclusivity = V3) %>% arrange(semantic_coherence)
 ```
 
-``` r
-Organizaitonal_culture_NoNumbers <- Organizaitonal_culture_NoNumbers %>%
-      mutate_at("word", list(~wordStem((.), language="en")))
-
-Organizaitonal_culture_NoNumbers %>%
-  count(word) %>%
-    arrange(desc(n))
-```
-
-    ## # A tibble: 19,883 × 2
-    ##    word         n
-    ##    <chr>    <int>
-    ##  1 servic    4031
-    ##  2 provid    2567
-    ##  3 compani   2562
-    ##  4 employe   2063
-    ##  5 opportun  1927
-    ##  6 care      1870
-    ##  7 busi      1837
-    ##  8 custom    1836
-    ##  9 client    1781
-    ## 10 career    1705
-    ## # … with 19,873 more rows
-
-``` r
-# Creat the document-term matrix for subsequent text analysis
-
-Organizaitonal_culture_DTM <-
-  Organizaitonal_culture_NoNumbers %>%
-  count(company, word) %>%
-  cast_dtm(company, word, n)
-```
-
-``` r
-print(Organizaitonal_culture_DTM)
-```
-
-    ## <<DocumentTermMatrix (documents: 2259, terms: 19883)>>
-    ## Non-/sparse entries: 191447/44724250
-    ## Sparsity           : 100%
-    ## Maximal term length: 64
-    ## Weighting          : term frequency (tf)
-
-``` r
-library(topicmodels)
-library(tidyverse)
-data("AssociatedPress")
-AssociatedPress %>% tidy()
-```
-
-    ## # A tibble: 302,031 × 3
-    ##    document term       count
-    ##       <int> <chr>      <dbl>
-    ##  1        1 adding         1
-    ##  2        1 adult          2
-    ##  3        1 ago            1
-    ##  4        1 alcohol        1
-    ##  5        1 allegedly      1
-    ##  6        1 allen          1
-    ##  7        1 apparently     2
-    ##  8        1 appeared       1
-    ##  9        1 arrested       1
-    ## 10        1 assault        1
-    ## # … with 302,021 more rows
-
-``` r
-Tidy_text <- AssociatedPress %>% tidy()
-```
-
-``` r
-# set a seed so that the output of the model is predictable
-ap_lda <- LDA(AssociatedPress, k = 2, control = list(seed = 1234))
-ap_lda
-```
-
-    ## A LDA_VEM topic model with 2 topics.
-
-``` r
-#> A LDA_VEM topic model with 2 topics.
-```
-
-``` r
-library(tidytext)
-
-ap_topics <- tidy(ap_lda, matrix = "beta")
-ap_topics %>% mutate_if(is.numeric, round, 3)
-```
-
-    ## # A tibble: 20,946 × 3
-    ##    topic term        beta
-    ##    <dbl> <chr>      <dbl>
-    ##  1     1 aaron          0
-    ##  2     2 aaron          0
-    ##  3     1 abandon        0
-    ##  4     2 abandon        0
-    ##  5     1 abandoned      0
-    ##  6     2 abandoned      0
-    ##  7     1 abandoning     0
-    ##  8     2 abandoning     0
-    ##  9     1 abbott         0
-    ## 10     2 abbott         0
-    ## # … with 20,936 more rows
-
-``` r
-library(ggplot2)
-library(dplyr)
-```
-
-``` r
-ap_top_terms <- ap_topics %>%
-  group_by(topic) %>%
-  slice_max(beta, n = 10) %>% 
-  ungroup() %>%
-  arrange(topic, -beta)
-
-ap_top_terms %>%
-  mutate(term = reorder_within(term, beta, topic)) %>%
-  ggplot(aes(beta, term, fill = factor(topic))) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~ topic, scales = "free") +
-  scale_y_reordered()
-```
-
-![](Text-analysis_files/figure-markdown_github/unnamed-chunk-11-1.png)
-
-``` r
-library(tidyr)
-
-beta_wide <- ap_topics %>%
-  mutate(topic = paste0("topic", topic)) %>%
-  pivot_wider(names_from = topic, values_from = beta) %>% 
-  filter(topic1 > .001 | topic2 > .001) %>%
-  mutate(log_ratio = log2(topic2 / topic1))
-
-beta_wide %>% mutate_if(is.numeric, round, 3)
-```
-
-    ## # A tibble: 198 × 4
-    ##    term           topic1 topic2 log_ratio
-    ##    <chr>           <dbl>  <dbl>     <dbl>
-    ##  1 administration  0      0.001     1.68 
-    ##  2 ago             0.001  0.001    -0.339
-    ##  3 agreement       0.001  0.001     0.63 
-    ##  4 aid             0      0.001     4.46 
-    ##  5 air             0.002  0        -2.85 
-    ##  6 american        0.002  0.002    -0.27 
-    ##  7 analysts        0.001  0       -10.9  
-    ##  8 area            0.001  0        -2.57 
-    ##  9 army            0      0.001     2.00 
-    ## 10 asked           0      0.002     3.05 
-    ## # … with 188 more rows
-
-``` r
-#> # A tibble: 198 × 4
-#>    term              topic1      topic2 log_ratio
-#>    <chr>              <dbl>       <dbl>     <dbl>
-#>  1 administration 0.000431  0.00138         1.68 
-#>  2 ago            0.00107   0.000842       -0.339
-#>  3 agreement      0.000671  0.00104         0.630
-#>  4 aid            0.0000476 0.00105         4.46 
-#>  5 air            0.00214   0.000297       -2.85 
-#>  6 american       0.00203   0.00168        -0.270
-#>  7 analysts       0.00109   0.000000578   -10.9  
-#>  8 area           0.00137   0.000231       -2.57 
-#>  9 army           0.000262  0.00105         2.00 
-#> 10 asked          0.000189  0.00156         3.05 
-#> # … with 188 more rows
-```
-
-``` r
-ap_documents <- tidy(ap_lda, matrix = "gamma")
-ap_documents %>% mutate_if(is.numeric, round, 3)
-```
-
-    ## # A tibble: 4,492 × 3
-    ##    document topic gamma
-    ##       <dbl> <dbl> <dbl>
-    ##  1        1     1 0.248
-    ##  2        2     1 0.362
-    ##  3        3     1 0.527
-    ##  4        4     1 0.357
-    ##  5        5     1 0.181
-    ##  6        6     1 0.001
-    ##  7        7     1 0.773
-    ##  8        8     1 0.004
-    ##  9        9     1 0.967
-    ## 10       10     1 0.147
-    ## # … with 4,482 more rows
-
-11111111hgni= #\> A LDA_VEM topic model with 2 topics.
+    ##      Nnumber_of_topics semantic_coherence semantic_exclusivity
+    ## X2L                  2           8.033410            -40.58673
+    ## X3L                  3           8.677512            -45.27131
+    ## X4L                  4           8.796057            -43.07162
+    ## X5L                  5           9.119265            -47.43057
+    ## X6L                  6           9.307978            -47.45364
+    ## X8L                  8           9.344858            -50.45285
+    ## X7L                  7           9.373690            -48.12765
+    ## X9L                  9           9.479072            -51.74460
+    ## X10L                10           9.523977            -51.42438
+    ## X11L                11           9.547642            -52.08919
+    ## X12L                12           9.594540            -51.99255
+    ## X13L                13           9.610890            -54.05007
+    ## X14L                14           9.632120            -53.84729
+    ## X16L                16           9.637456            -56.13576
+    ## X17L                17           9.639122            -59.63846
+    ## X15L                15           9.650038            -56.22887
+    ## X18L                18           9.666360            -61.04416
+    ## X20L                20           9.688017            -62.01374
+    ## X19L                19           9.696281            -64.21681
+    ## X23L                23           9.713271            -63.03483
+    ## X24L                24           9.715127            -62.86012
+    ## X21L                21           9.722107            -63.95700
+    ## X22L                22           9.723765            -64.04404
+    ## X32L                32           9.731146            -64.69285
+    ## X26L                26           9.733123            -63.04437
+    ## X31L                31           9.733555            -63.97041
+    ## X30L                30           9.738128            -64.18451
+    ## X27L                27           9.739501            -63.50200
+    ## X25L                25           9.740139            -63.08125
+    ## X33L                33           9.742605            -65.14858
+    ## X29L                29           9.748035            -63.82543
+    ## X28L                28           9.752978            -63.87443
+    ## X34L                34           9.753063            -66.05225
+    ## X35L                35           9.760183            -65.87990
+    ## X36L                36           9.771910            -66.16024
+    ## X37L                37           9.788041            -66.51865
+    ## X43L                43           9.803141            -67.41028
+    ## X44L                44           9.805012            -67.49218
+    ## X46L                46           9.805102            -66.58006
+    ## X38L                38           9.805816            -67.11276
+    ## X42L                42           9.806649            -68.23743
+    ## X45L                45           9.806701            -67.41661
+    ## X39L                39           9.810238            -66.77796
+    ## X40L                40           9.813812            -68.13395
+    ## X47L                47           9.818348            -68.51743
+    ## X48L                48           9.819409            -68.65429
+    ## X49L                49           9.820518            -69.19331
+    ## X50L                50           9.820616            -68.64202
+    ## X41L                41           9.822102            -67.82505
