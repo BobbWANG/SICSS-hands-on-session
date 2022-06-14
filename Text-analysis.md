@@ -126,7 +126,7 @@ v1 = FALSE)
 plotRemoved(Organizaitonal_culture_Preprocessed$documents, lower.thresh = seq(1, 201, by = 10))
 ```
 
-![](Text-analysis_files/figure-markdown_github/unnamed-chunk-1-1.png)
+![](Text-analysis_files/figure-markdown_github/unnamed-chunk-2-1.png)
 
 ### Select a threshold and preprocess the documents
 
@@ -174,7 +174,7 @@ selection results when the threshold is 24 documents.
 plot(model_search_thresh24)
 ```
 
-![](Text-analysis_files/figure-markdown_github/unnamed-chunk-5-1.png)
+![](Text-analysis_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
 Searching when setting the threshold as 117.
 
@@ -190,7 +190,7 @@ model_search_thresh117 <- searchK(output_thresh117$documents, output_thresh117$v
 plot(model_search_thresh117)
 ```
 
-![](Text-analysis_files/figure-markdown_github/unnamed-chunk-7-1.png)
+![](Text-analysis_files/figure-markdown_github/unnamed-chunk-8-1.png)
 \### Inspect the model indices \#### when the threshold is 24
 
 ``` r
