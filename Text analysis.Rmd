@@ -11,194 +11,141 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Organizational Culture
+
+Definition: Things that are valued or rewarded within a specific organization – that is, the pattern of beliefs and expectations shared by members, and the behaviors that result from them.
+
+## Organizational Culture Profile
+
+Adaptability: being innovative, risk taking, being willing to experiment, fast moving, being quick to take advantage of opportunities, not being constrained by many rules
+
+Integrity: having integrity, having high ethical standards, being honest, respecting individuals, being fair
+
+Collaborative: working in collaboration with others, being team oriented, cooperative, being supportive, avoid conflict
+
+Results oriented: being results oriented, having high expectations for performance, achievement
+
+Customer oriented: being customer oriented, listening to customers, being market driven
+
+Detail oriented: paying attention to detail, emphasizing quality, being precise
+
+The original format of the scale is Q-sort task, which is relatively time- and energy-consuming for participants. Therefore, we decide to develop and validate more easy question formats: Likert scale item and point allocation task.
+
+## A Pilot Study
+
+313 participants and 60 job advertisements extracted from a professional recruitment website. After reading organization-related information from each job advertisement, participants rated the described organization on the six OCP organizational cultures and organizational attractiveness.
+
+We calculated the validation coefficients for the different question formats. 
+
+Generally, the different question format converged well with each other. Questions measuring the same culture dimension indicated high correlations than questions measuring different culture dimensions.
+
+## I am Personally not Satisfied With the Validation Outcome 
+
+We didnt' replicate the six organizational cultures by using the OCP following the original authors' procedure. 
+
+One potential reason is that our sample size is not large enough.
+
+Another reason would be that novel people's (employees') communication or experience of organizational cultures is different from employers'.
+
+Whether the dimensions people use to communicate organizational cultures are different from the employers try to communicate in job advertisements?
+
+I think the questions with different formats need a more validation step based on a relative large sample size having relatively good external validity. That is applying text mining techniques to job advertisements. 
+
+## A New Validation Step by Using Structural Topic Modeling
+
+We extracted more descriptions (around 2200 descriptions including the original sixty). I can compare the culture keywords from the OCP with the topic keywords returned by the STM.
+
+Because the original 60 descriptions were rated by on average 10 raters, I can make use of these scores. For example, I can choose a description and see the extent to which the dominant topics (the keywords related to them) that the STM characterize converge with the its OCP culture scores.
+
+The following are the concrete steps I took and some snapshoots of the results. During the analyssi, I encountered some problems that need your help and suggestions! 
+
+### Read in data
+
 ```{r Load data file}
 Organizaitonal_Culture <- readxl::read_xlsx("companies_2ndPartwith1ndPart60.xlsx",na = "",col_names = T, sheet = "Sheet2")
 ```
 
-```{r Load environment for text analysis}
-library(tm)
-library(tidyverse)
-library(tidytext)
-library(dplyr)
+### Load packages for data analysis
+```{r Load environment for text analysis, results = FALSE}
+library(stm)
 ```
 
-```{r Corpus approach}
-# by using tm package, create corpus dataframe for text data 
-Organizaitonal_culture_corpus <- Corpus(VectorSource(as.vector(Organizaitonal_Culture$company_description))) 
-Organizaitonal_culture_corpus
+### Preprocess the documents
+```{r Preprocess the documents}
+Organizaitonal_culture_Preprocessed <- textProcessor(Organizaitonal_Culture$company_description, metadata = Organizaitonal_Culture,
+lowercase = TRUE,
+removestopwords = TRUE,
+removenumbers = TRUE,
+removepunctuation = TRUE,
+ucp = FALSE,
+stem = TRUE,
+wordLengths = c(3, Inf),
+sparselevel = 1,
+language = "en",
+verbose = TRUE,
+onlycharacter = FALSE,
+striphtml = FALSE,
+customstopwords = c("company"),
+custompunctuation = NULL,
+v1 = FALSE) 
 ```
 
-```{r Tidy-text approach}
-# by using tidyverse package, create tidy-text data, punctuations are automatically removed and all words are automatically made lower case 
-Organizaitonal_culture_tidytext <- Organizaitonal_Culture %>%
-    select(company,company_description) %>%
-    unnest_tokens("word", company_description)
-head(Organizaitonal_culture_tidytext)
+### Plot the number of words and documents removed for different thresholds
+```{r}
+plotRemoved(Organizaitonal_culture_Preprocessed$documents, lower.thresh = seq(1, 201, by = 10))
+```
 
+### Select a threshold and preprocess the documents
+Qeustions: What are your suggestions for selecting a reasonable threshold? 
+Setting the threshold as 24 (1% of the number of the total documents)
+```{r}
+output_thresh24 <- prepDocuments(Organizaitonal_culture_Preprocessed$documents, Organizaitonal_culture_Preprocessed$vocab, lower.thresh = 24)
+```
+
+Setting the threshold as 117 (1% of the number of the total documents)
+```{r}
+output_thresh117 <- prepDocuments(Organizaitonal_culture_Preprocessed$documents, Organizaitonal_culture_Preprocessed$vocab, lower.thresh = 117)
+```
+
+### Model selection and search
+Searching when setting the threshold as 24.
+```{r}
+model_search_thresh24 <- searchK(output_thresh24$documents, out$vocab, K = (2:50), proportion = 0.3, heldout.seed = 666666, cores = 5)
+```
+
+### Plot of model selection results
+Semantic coherence: the core idea is that in models which are semantically coherent the words which are most probable under a topic should co-occur within the same document.
+Semantic exclusivity: The core idea is that the top words for a topic are unlikely to appear within top words of other topics.
+These two indexes are usually negatively correlated so that a trade-off must be made.
+#### Plot for the model selection results when the threshold is 24 documents.
+```{r}
+plot(model_search_thresh24)
+```
+
+Searching when setting the threshold as 117.
+```{r}
+model_search_thresh117 <- searchK(output_thresh117$documents, output_thresh117$vocab, K = (2:50), proportion = 0.3, heldout.seed = 666666, cores = 5)
+```
+
+### Plot for the model selection results when the threshold is 117 documents.
+```{r}
+plot(model_search_thresh117)
+```
+### Inspect the model indices 
+#### when the threshold is 24
+```{r}
+model_indices_threshold24 <- as.data.frame(cbind(t(as.data.frame(model_search_thresh24[['results']]$K)), t(as.data.frame(model_search_thresh24[['results']]$exclus)), t(as.data.frame(model_search_thresh24[['results']]$semcoh))))
 ```
 
 ```{r}
-Organizaitonal_culture_tidytext %>%
-  count(word) %>%
-    arrange(desc(n))
+model_indices_threshold24  %>% rename(Nnumber_of_topics = V1, semantic_coherence = V2, semantic_exclusivity = V3) %>% arrange(semantic_coherence)
 ```
 
-```{r Remove stopwords}
-data("stop_words")
-Organizaitonal_culture_tidytext <- Organizaitonal_culture_tidytext %>%
-      anti_join(stop_words)
+#### when the threshold is 117
+```{r}
+model_indices_threshold117 <- as.data.frame(cbind(t(as.data.frame(model_search_thresh117[['results']]$K)), t(as.data.frame(model_search_thresh117[['results']]$exclus)), t(as.data.frame(model_search_thresh117[['results']]$semcoh))))
 ```
 
 ```{r}
-Organizaitonal_culture_tidytext %>%
-  count(word) %>%
-    arrange(desc(n))
+model_indices_threshold117  %>% rename(Nnumber_of_topics = V1, semantic_coherence = V2, semantic_exclusivity = V3) %>% arrange(semantic_coherence)
 ```
-
-
-```{r Custom remove list}
-# it is possible to remove more meaningless words by creating a custom list
-Custom_removal <- t(as.data.frame(c("overview", "SMART")))  # 'overview' is the field title for all d
-Custom_removal <- Custom_removal %>% as.data.frame(row.name = as.numeric("1")) %>% rename(word = V1, lexicon = V2)
-
-Organizaitonal_culture_tidytext <- Organizaitonal_culture_tidytext %>%
-      anti_join(Custom_removal)
-
-Organizaitonal_culture_tidytext %>%
-  count(word) %>%
-    arrange(desc(n))
-```
-
-```{r}
-str(Organizaitonal_culture_tidytext)
-```
-
-
-```{r}
-Organizaitonal_culture_NoNumbers <- Organizaitonal_culture_tidytext[-grep("\\b\\d+\\b", Organizaitonal_culture_tidytext$word), ]
-
-Organizaitonal_culture_NoNumbers %>%
-  count(word) %>%
-    arrange(desc(n))
-```
-
-```{r Remove whitespaces}
-# maybe this step is no longer necessary because I don't see there is a difference by running this line of code
-
-Organizaitonal_culture_NoNumbers$word <- gsub("\\s+","",Organizaitonal_culture_NoNumbers$word)
-```
-
-```{r Load package for stemming}
-library(SnowballC)
-```
-
-```{r Stemming}
-Organizaitonal_culture_NoNumbers <- Organizaitonal_culture_NoNumbers %>%
-      mutate_at("word", list(~wordStem((.), language="en")))
-
-Organizaitonal_culture_NoNumbers %>%
-  count(word) %>%
-    arrange(desc(n))
-```
-
-```{r Creat the document-term matrix for subsequent text analysis}
-# Creat the document-term matrix for subsequent text analysis
-
-Organizaitonal_culture_DTM <-
-  Organizaitonal_culture_NoNumbers %>%
-  count(company, word) %>%
-  cast_dtm(company, word, n)
-```
-
-```{r}
-print(Organizaitonal_culture_DTM)
-```
-
-
-
-
-```{r}
-library(topicmodels)
-library(tidyverse)
-data("AssociatedPress")
-AssociatedPress %>% tidy()
-```
-
-```{r}
-Tidy_text <- AssociatedPress %>% tidy()
-```
-
-```{r}
-# set a seed so that the output of the model is predictable
-ap_lda <- LDA(AssociatedPress, k = 2, control = list(seed = 1234))
-ap_lda
-#> A LDA_VEM topic model with 2 topics.
-```
-
-```{r}
-library(tidytext)
-
-ap_topics <- tidy(ap_lda, matrix = "beta")
-ap_topics %>% mutate_if(is.numeric, round, 3)
-```
-
-```{r}
-library(ggplot2)
-library(dplyr)
-```
-
-
-```{r}
-ap_top_terms <- ap_topics %>%
-  group_by(topic) %>%
-  slice_max(beta, n = 10) %>% 
-  ungroup() %>%
-  arrange(topic, -beta)
-
-ap_top_terms %>%
-  mutate(term = reorder_within(term, beta, topic)) %>%
-  ggplot(aes(beta, term, fill = factor(topic))) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~ topic, scales = "free") +
-  scale_y_reordered()
-```
-
-```{r}
-library(tidyr)
-
-beta_wide <- ap_topics %>%
-  mutate(topic = paste0("topic", topic)) %>%
-  pivot_wider(names_from = topic, values_from = beta) %>% 
-  filter(topic1 > .001 | topic2 > .001) %>%
-  mutate(log_ratio = log2(topic2 / topic1))
-
-beta_wide %>% mutate_if(is.numeric, round, 3)
-#> # A tibble: 198 × 4
-#>    term              topic1      topic2 log_ratio
-#>    <chr>              <dbl>       <dbl>     <dbl>
-#>  1 administration 0.000431  0.00138         1.68 
-#>  2 ago            0.00107   0.000842       -0.339
-#>  3 agreement      0.000671  0.00104         0.630
-#>  4 aid            0.0000476 0.00105         4.46 
-#>  5 air            0.00214   0.000297       -2.85 
-#>  6 american       0.00203   0.00168        -0.270
-#>  7 analysts       0.00109   0.000000578   -10.9  
-#>  8 area           0.00137   0.000231       -2.57 
-#>  9 army           0.000262  0.00105         2.00 
-#> 10 asked          0.000189  0.00156         3.05 
-#> # … with 188 more rows
-```
-
-```{r}
-ap_documents <- tidy(ap_lda, matrix = "gamma")
-ap_documents %>% mutate_if(is.numeric, round, 3)
-```
-
-
-11111111hgni=
-#> A LDA_VEM topic model with 2 topics.
-
-
-
-
-
